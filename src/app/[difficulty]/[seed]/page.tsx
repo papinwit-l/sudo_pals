@@ -39,5 +39,13 @@ export default function GamePage({
     router.push(`/${d}/${newSeed}`);
   }
 
-  return <Game difficulty={diff} seed={validSeed} onNewGame={handleNewGame} />;
+  // key forces full remount when params change
+  return (
+    <Game
+      key={`${diff}-${validSeed}`}
+      difficulty={diff}
+      seed={validSeed}
+      onNewGame={handleNewGame}
+    />
+  );
 }
