@@ -188,8 +188,6 @@ function gameReducer(state: FullState, action: GameAction): FullState {
 
 function createInitialState(difficulty: Difficulty, seed?: number): FullState {
   const saved = loadState();
-
-  // Only restore if same difficulty and seed
   if (saved && saved.difficulty === difficulty && saved.seed === seed) {
     return saved;
   }
