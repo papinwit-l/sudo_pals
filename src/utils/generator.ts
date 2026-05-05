@@ -93,13 +93,17 @@ export function generatePuzzle(difficulty: Difficulty, seed: number): Board {
   const board = generateSolvedBoard(random);
   removeCells(board, difficulty, random);
 
+  // Debug — count remaining clues
+  let clues = 0;
   for (let row = 0; row < 9; row++) {
     for (let col = 0; col < 9; col++) {
       if (board[row][col].value !== null) {
         board[row][col].isFixed = true;
+        clues++;
       }
     }
   }
+  console.log(`Difficulty: ${difficulty}, Clues: ${clues}, Seed: ${seed}`);
 
   return board;
 }

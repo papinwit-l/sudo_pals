@@ -31,7 +31,7 @@ export default function Game({ difficulty, seed, onNewGame }: GameProps) {
     redo,
     newGame,
     tickTimer,
-  } = useGame("easy");
+  } = useGame(difficulty, seed);
 
   const [noteMode, setNoteMode] = useState(false);
 

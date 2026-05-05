@@ -25,6 +25,8 @@ export default function GamePage({
   params: Promise<{ difficulty: string; seed: string }>;
 }) {
   const { difficulty, seed } = use(params);
+  console.log("Page params:", difficulty, seed);
+
   const router = useRouter();
 
   const diff: Difficulty = validDifficulties.includes(difficulty)
