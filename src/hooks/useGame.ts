@@ -216,14 +216,6 @@ export function useGame(
     (init) => createInitialState(init.difficulty, init.seed),
   );
 
-  // Restore saved state after hydration
-  useEffect(() => {
-    const saved = loadState();
-    if (saved) {
-      dispatch({ type: "RESTORE_STATE", savedState: saved });
-    }
-  }, []);
-
   // Auto-save on every state change
   useEffect(() => {
     saveState(state);
