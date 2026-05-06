@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { generateSeed } from "@/utils/random";
 import { Difficulty } from "@/types/sudoku";
@@ -46,9 +46,11 @@ export default function Home() {
   const [roomCode, setRoomCode] = useState("");
 
   // Navigate to room when joined/created
-  if (roomState) {
-    router.push(`/room/${roomState.code}`);
-  }
+  useEffect(() => {
+    if (roomState) {
+      router.push(`/room/${roomState.code}`);
+    }
+  }, [roomState, router]);
 
   function handleSoloPlay(d: Difficulty) {
     const seed = generateSeed();

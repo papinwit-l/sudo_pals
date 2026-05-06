@@ -2,9 +2,9 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSocket } from "./useSocket";
-import { CellValue, Difficulty } from "@/types/sudoku";
+import { Difficulty } from "@/types/sudoku";
 import {
   ValidationMode,
   RoomState,
@@ -51,23 +51,8 @@ export function useRoom() {
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const hasAttemptedRejoin = useRef(false);
 
-  // ---- Auto-rejoin on reconnect ----
-  useEffect(() => {
-    if (connectionStatus !== "connected" || hasAttemptedRejoin.current) return;
-
-    const session = loadSession();
-    if (session) {
-      hasAttemptedRejoin.current = true;
-      emit("REJOIN_ROOM", {
-        code: session.code,
-        sessionToken: session.sessionToken,
-      });
-    }
-  }, [connectionStatus, emit]);
-
-  // ---- Socket event listeners ----
+  // ---- Socket event listeners + auto-rejoin ----
   useEffect(() => {
     if (connectionStatus === "disconnected") return;
 
@@ -78,11 +63,13 @@ export function useRoom() {
       on<{
         code: string;
         seed: number;
+        difficulty: Difficulty;
         board: SerializedBoard;
         isCustomSeed: boolean;
         validationMode: ValidationMode;
         sessionToken: string;
         playerId: string;
+        nickname: string;
         color: PlayerColor;
       }>("ROOM_CREATED", (data) => {
         const session: RoomSession = {
@@ -98,7 +85,7 @@ export function useRoom() {
           players: [
             {
               id: data.playerId,
-              nickname: "", // will be set from player list
+              nickname: data.nickname,
               color: data.color,
               status: "connected",
               selectedCell: null,
@@ -107,7 +94,7 @@ export function useRoom() {
           ],
           myPlayerId: data.playerId,
           myColor: data.color,
-          difficulty: "easy", // will be updated
+          difficulty: data.difficulty,
           seed: data.seed,
           timer: 0,
           isCustomSeed: data.isCustomSeed,
@@ -124,6 +111,7 @@ export function useRoom() {
     // ROOM_JOINED
     cleanups.push(
       on<{
+        code: string;
         board: SerializedBoard;
         players: SerializedPlayer[];
         seed: number;
@@ -136,17 +124,14 @@ export function useRoom() {
         color: PlayerColor;
         cellOwners: Record<string, string>;
       }>("ROOM_JOINED", (data) => {
-        const session = loadSession();
-        const code = session?.code || "";
-
         saveSession({
-          code,
+          code: data.code,
           sessionToken: data.sessionToken,
           playerId: data.playerId,
         });
 
         setRoomState({
-          code,
+          code: data.code,
           board: data.board,
           players: data.players,
           myPlayerId: data.playerId,
@@ -168,14 +153,45 @@ export function useRoom() {
     // ROOM_STATE (reconnection)
     cleanups.push(
       on<{
+        code: string;
         board: SerializedBoard;
         players: SerializedPlayer[];
         timer: number;
+        difficulty: Difficulty;
+        seed: number;
+        isCustomSeed: boolean;
+        validationMode: ValidationMode;
         yourNotes: Record<string, number[]>;
         cellOwners: Record<string, string>;
       }>("ROOM_STATE", (data) => {
         setRoomState((prev) => {
-          if (!prev) return prev;
+          const session = loadSession();
+
+          if (!prev) {
+            // Fresh reconnect — build full state from server data
+            if (!session) return null;
+
+            const myPlayer = data.players.find(
+              (p) => p.id === session.playerId,
+            );
+
+            return {
+              code: data.code,
+              board: data.board,
+              players: data.players,
+              myPlayerId: session.playerId,
+              myColor: myPlayer?.color || "indigo",
+              difficulty: data.difficulty,
+              seed: data.seed,
+              timer: data.timer,
+              isCustomSeed: data.isCustomSeed,
+              validationMode: data.validationMode,
+              cellOwners: data.cellOwners,
+              isComplete: false,
+              completionStats: null,
+            };
+          }
+
           return {
             ...prev,
             board: data.board,
@@ -281,7 +297,7 @@ export function useRoom() {
           );
           newBoard[data.row][data.col] = {
             ...newBoard[data.row][data.col],
-            value: data.value as CellValue,
+            value: data.value as any,
             isError: data.isError,
           };
 
@@ -416,10 +432,22 @@ export function useRoom() {
       }),
     );
 
+    // ---- Auto-rejoin after listeners are ready ----
+    if (connectionStatus === "connected") {
+      const session = loadSession();
+      if (session && session.sessionToken) {
+        setIsLoading(true);
+        emit("REJOIN_ROOM", {
+          code: session.code,
+          sessionToken: session.sessionToken,
+        });
+      }
+    }
+
     return () => {
       cleanups.forEach((cleanup) => cleanup());
     };
-  }, [connectionStatus, on]);
+  }, [connectionStatus, on, emit]);
 
   // ---- Timer sync (client-side tick) ----
   useEffect(() => {
@@ -455,10 +483,6 @@ export function useRoom() {
     (nickname: string, code: string) => {
       setIsLoading(true);
       setError(null);
-
-      // Store code before emitting so ROOM_JOINED handler can access it
-      saveSession({ code: code.toUpperCase(), sessionToken: "", playerId: "" });
-
       emit("JOIN_ROOM", { nickname, code: code.toUpperCase() });
     },
     [emit],
