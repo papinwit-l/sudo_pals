@@ -11,7 +11,6 @@ const SERVER_URL =
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
 type UseSocketReturn = {
-  socket: Socket | null;
   status: ConnectionStatus;
   emit: <T>(event: string, data?: T) => void;
   on: <T>(event: string, handler: (data: T) => void) => () => void;
@@ -19,11 +18,10 @@ type UseSocketReturn = {
 
 export function useSocket(): UseSocketReturn {
   const socketRef = useRef<Socket | null>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
 
   useEffect(() => {
-    const newSocket = io(SERVER_URL, {
+    const socket = io(SERVER_URL, {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -31,31 +29,29 @@ export function useSocket(): UseSocketReturn {
       reconnectionDelayMax: 5000,
     });
 
-    socketRef.current = newSocket;
-    setSocket(newSocket);
+    socketRef.current = socket;
 
-    newSocket.on("connect", () => {
-      console.log("[Socket] Connected:", newSocket.id);
+    socket.on("connect", () => {
+      console.log("[Socket] Connected:", socket.id);
       setStatus("connected");
     });
 
-    newSocket.on("disconnect", (reason) => {
+    socket.on("disconnect", (reason) => {
       console.log("[Socket] Disconnected:", reason);
       setStatus("disconnected");
     });
 
-    newSocket.on("reconnecting", () => {
+    socket.on("reconnecting", () => {
       setStatus("connecting");
     });
 
-    newSocket.on("reconnect_attempt", () => {
+    socket.on("reconnect_attempt", () => {
       setStatus("connecting");
     });
 
     return () => {
-      newSocket.disconnect();
+      socket.disconnect();
       socketRef.current = null;
-      setSocket(null);
     };
   }, []);
 
@@ -72,7 +68,6 @@ export function useSocket(): UseSocketReturn {
   }, []);
 
   return {
-    socket,
     status,
     emit,
     on,
