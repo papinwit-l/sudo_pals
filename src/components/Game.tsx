@@ -8,16 +8,20 @@ import Board from "./Board";
 import NumberPad from "./NumberPad";
 import GameControls from "./GameControls";
 import { Difficulty } from "@/types/sudoku";
-import { useRouter } from "next/router";
-import { generateSeed } from "@/utils/random";
 
 type GameProps = {
   difficulty: Difficulty;
   seed: number;
   onNewGame: (difficulty: Difficulty) => void;
+  onBack?: () => void;
 };
 
-export default function Game({ difficulty, seed, onNewGame }: GameProps) {
+export default function Game({
+  difficulty,
+  seed,
+  onNewGame,
+  onBack,
+}: GameProps) {
   const {
     board,
     selectedCell,
@@ -79,6 +83,16 @@ export default function Game({ difficulty, seed, onNewGame }: GameProps) {
 
   return (
     <div className="sudoku-theme flex flex-col items-center w-full px-4 py-6 max-w-lg mx-auto min-h-screen justify-center">
+      {/* Back button */}
+      {onBack && (
+        <button
+          className="self-start text-sm text-[var(--color-action-text)] hover:underline cursor-pointer mb-2"
+          onClick={onBack}
+        >
+          ← Home
+        </button>
+      )}
+
       {/* Title */}
       <div className="flex items-center gap-2 mb-6">
         <span className="text-3xl">🧩</span>

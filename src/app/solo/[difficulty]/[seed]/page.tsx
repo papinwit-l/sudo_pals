@@ -1,4 +1,4 @@
-// src/app/[difficulty]/[seed]/page.tsx
+// src/app/solo/[difficulty]/[seed]/page.tsx
 
 "use client";
 
@@ -19,14 +19,12 @@ const Game = dynamic(() => import("@/components/Game"), {
 
 const validDifficulties = ["easy", "medium", "hard"];
 
-export default function GamePage({
+export default function SoloGamePage({
   params,
 }: {
   params: Promise<{ difficulty: string; seed: string }>;
 }) {
   const { difficulty, seed } = use(params);
-  console.log("Page params:", difficulty, seed);
-
   const router = useRouter();
 
   const diff: Difficulty = validDifficulties.includes(difficulty)
@@ -38,16 +36,22 @@ export default function GamePage({
 
   function handleNewGame(d: Difficulty) {
     const newSeed = generateSeed();
-    router.push(`/${d}/${newSeed}`);
+    router.push(`/solo/${d}/${newSeed}`);
   }
 
-  // key forces full remount when params change
+  function handleBackToHome() {
+    router.push("/");
+  }
+
   return (
-    <Game
-      key={`${diff}-${validSeed}`}
-      difficulty={diff}
-      seed={validSeed}
-      onNewGame={handleNewGame}
-    />
+    <div>
+      <Game
+        key={`${diff}-${validSeed}`}
+        difficulty={diff}
+        seed={validSeed}
+        onNewGame={handleNewGame}
+        onBack={handleBackToHome}
+      />
+    </div>
   );
 }
